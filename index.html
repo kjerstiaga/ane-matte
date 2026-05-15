@@ -572,7 +572,32 @@ const questions = [
 ];
 function renderDots() { const d = document.getElementById('progressDots'); d.innerHTML = ''; questions.forEach((_,i) => { const dot = document.createElement('div'); dot.className = 'dot' + (i < questionIndex ? ' done' : i === questionIndex ? ' current' : ''); d.appendChild(dot); }); }
 function drawGraph(fn, p1, p2) { const canvas = document.getElementById('graphCanvas'); const ctx = canvas.getContext('2d'); const W=canvas.width,H=canvas.height,pad=34,sX=(W-2*pad)/10,sY=(H-2*pad)/10,ox=pad+5*sX,oy=pad+5*sY; ctx.clearRect(0,0,W,H); ctx.fillStyle='#12121a'; ctx.fillRect(0,0,W,H); ctx.strokeStyle='#2a2a3a'; ctx.lineWidth=1; for(let i=-5;i<=5;i++){ctx.beginPath();ctx.moveTo(ox+i*sX,pad);ctx.lineTo(ox+i*sX,H-pad);ctx.stroke();ctx.beginPath();ctx.moveTo(pad,oy-i*sY);ctx.lineTo(W-pad,oy-i*sY);ctx.stroke();} ctx.strokeStyle='#64748b';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(pad,oy);ctx.lineTo(W-pad,oy);ctx.stroke();ctx.beginPath();ctx.moveTo(ox,pad);ctx.lineTo(ox,H-pad);ctx.stroke(); ctx.strokeStyle='#7c5cfc';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(ox-5*sX,oy-fn(-5)*sY);ctx.lineTo(ox+5*sX,oy-fn(5)*sY);ctx.stroke(); [[p1,'#22c55e'],[p2,'#f59e0b']].forEach(([p,col])=>{ctx.beginPath();ctx.arc(ox+p[0]*sX,oy-p[1]*sY,5,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();ctx.fillStyle='#e2e8f0';ctx.font='bold 10px system-ui';ctx.textAlign='left';ctx.fillText('('+p[0]+','+p[1]+')',ox+p[0]*sX+7,oy-p[1]*sY-7);}); }
-function renderQuestion() { answered=false;hintUsed=false; const q=questions[questionIndex]; document.getElementById('nextBtn').classList.remove('visible'); document.getElementById('hintBox').classList.remove('show'); document.getElementById('hintBox').textContent=''; document.getElementById('topicTag').textContent=q.topic; document.getElementById('questionText').innerHTML=q.question; const fb=document.getElementById('formulaBox'); if(q.formula){fb.style.display='block';fb.textContent=q.formula;}else fb.style.display='none'; const cv=document.getElementById('graphCanvas'); if(q.type==='graph'){cv.style.display='block';setTimeout(()=>drawGraph(q.graphFn,q.p1,q.p2),50);}else cv.style.display='none'; const area=document.getElementById('answerArea'); const feed=document.getElementById('feedback'); feed.className='feedback';feed.innerHTML=''; if(q.type==='multiple'){area.innerHTML='<div class="options">'+q.options.map((o,i)=>'<button class="option-btn" onclick="checkMultiple('+i+'">'+o+'</button>').join('')+'</div>';} else{area.innerHTML='<div class="input-row"><input class="answer-input" id="answerInput" type="text" placeholder="Skriv svaret..." autocomplete="off"><button class="submit-btn" id="submitBtn" onclick="checkInput()">Sjekk</button></div>';setTimeout(()=>{const inp=document.getElementById('answerInput');if(inp){inp.addEventListener('keydown',e=>{if(e.key==='Enter')checkInput();});inp.focus();}},50);} renderDots(); }
+function renderQuestion() {
+  answered=false; hintUsed=false;
+  const q=questions[questionIndex];
+  document.getElementById('nextBtn').classList.remove('visible');
+  const hb=document.getElementById('hintBox'); hb.classList.remove('show'); hb.textContent='';
+  document.getElementById('topicTag').textContent=q.topic;
+  document.getElementById('questionText').innerHTML=q.question;
+  const fb=document.getElementById('formulaBox');
+  if(q.formula){fb.style.display='block';fb.textContent=q.formula;}else fb.style.display='none';
+  const cv=document.getElementById('graphCanvas');
+  if(q.type==='graph'){cv.style.display='block';setTimeout(()=>drawGraph(q.graphFn,q.p1,q.p2),50);}else cv.style.display='none';
+  const area=document.getElementById('answerArea');
+  const feed=document.getElementById('feedback'); feed.className='feedback'; feed.innerHTML='';
+  if(q.type==='multiple'){
+    const div=document.createElement('div'); div.className='options';
+    q.options.forEach((o,i)=>{
+      const btn=document.createElement('button'); btn.className='option-btn';
+      btn.innerHTML=o; btn.onclick=()=>checkMultiple(i); div.appendChild(btn);
+    });
+    area.innerHTML=''; area.appendChild(div);
+  } else {
+    area.innerHTML='<div class="input-row"><input class="answer-input" id="answerInput" type="text" placeholder="Skriv svaret..." autocomplete="off"><button class="submit-btn" id="submitBtn" onclick="checkInput()">Sjekk</button></div>';
+    setTimeout(()=>{const inp=document.getElementById('answerInput');if(inp){inp.addEventListener('keydown',e=>{if(e.key==='Enter')checkInput();});inp.focus();}},50);
+  }
+  renderDots();
+}
 function showHint(){const q=questions[questionIndex];const hb=document.getElementById('hintBox');hb.textContent='💡 '+q.hint;hb.classList.add('show');hintUsed=true;}
 function checkMultiple(chosen){if(answered)return;answered=true;const q=questions[questionIndex];const btns=document.querySelectorAll('.option-btn');btns.forEach(b=>b.disabled=true);const ok=chosen===q.correct;btns[chosen].classList.add(ok?'correct':'wrong');if(!ok)btns[q.correct].classList.add('reveal');handleResult(ok,q.explanation);}
 function checkInput(){if(answered)return;const q=questions[questionIndex];const inp=document.getElementById('answerInput');const sub=document.getElementById('submitBtn');const val=inp.value.trim().replace(',','.');if(!val)return;answered=true;inp.disabled=true;sub.disabled=true;const ok=val===q.correct.toString();inp.classList.add(ok?'correct':'wrong');handleResult(ok,q.explanation+(!ok?'<br><br>Riktig: <b>'+q.correct+'</b>':''));}
@@ -580,7 +605,16 @@ function handleResult(ok,explanation){const feed=document.getElementById('feedba
 function updateHUD(){const lv=getLevel(xp);const nx=levels[lv.level]||null;const inLv=xp-lv.min;const forNx=nx?nx.min-lv.min:100;const pct=Math.min(100,Math.round((inLv/forNx)*100));document.getElementById('levelBadge').textContent=lv.emoji+' Nivå '+lv.level+' — '+lv.name;document.getElementById('xpText').textContent=inLv+' / '+forNx+' XP';document.getElementById('xpFill').style.width=pct+'%';document.getElementById('streakVal').textContent=streak;document.getElementById('correctVal').textContent=correctCount;document.getElementById('xpTotal').textContent=xp;}
 function showToast(msg){const t=document.getElementById('streakToast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 function nextQuestion(){questionIndex++;if(questionIndex>=questions.length)showFinish();else{renderQuestion();window.scrollTo({top:0,behavior:'smooth'});}}
-function showFinish(){const pct=Math.round((correctCount/questions.length)*100);document.getElementById('questionCard').innerHTML='<div style="text-align:center;padding:20px 0"><div style="font-size:3rem;margin-bottom:14px">'+(pct>=80?'🏆':pct>=60?'💪':'📚')+'</div><div style="font-size:1.25rem;font-weight:700;color:var(--accent2);margin-bottom:6px">Fullført!</div><div style="color:var(--muted);font-size:.84rem">'+correctCount+' av '+questions.length+' riktige · '+xp+' XP</div></div>';document.getElementById('nextBtn').classList.remove('visible');}
+function showFinish() {
+  const pct=Math.round((correctCount/questions.length)*100);
+  const card=document.getElementById('questionCard'); card.innerHTML='';
+  const wrap=document.createElement('div'); wrap.style.cssText='text-align:center;padding:20px 0';
+  wrap.innerHTML='<div style="font-size:3rem;margin-bottom:14px">'+(pct>=80?'🏆':pct>=60?'💪':'📚')+'</div>'
+    +'<div style="font-size:1.25rem;font-weight:700;color:var(--accent2);margin-bottom:6px">Fullført!</div>'
+    +'<div style="color:var(--muted);font-size:.84rem">'+correctCount+' av '+questions.length+' riktige &middot; '+xp+' XP</div>';
+  card.appendChild(wrap);
+  document.getElementById('nextBtn').classList.remove('visible');
+}
 renderDots(); renderQuestion();
 
 // ADAPTIVE
@@ -694,14 +728,28 @@ function renderEx(id) {
   document.getElementById(id+'-diff-txt').innerHTML='Nivå: <strong style="color:'+diffColors[id]+'">'+diffNames[s.diffLevel]+'</strong>';
   document.getElementById(id+'-prog-fill').style.width=(s.idx/total*100)+'%';
   const wrap=document.getElementById(id+'-wrap');
-  const optsHtml=q.opts.map((o,i)=>'<button class="opt-btn" onclick="checkEx(\''+id+'\','+i+')">'+o+'</button>').join('');
-  wrap.innerHTML='<div class="ex-tag">'+q.tag+'</div>'
-    +'<div class="ex-q">'+q.q+'</div>'
-    +(q.formel?'<div class="formel-box">'+q.formel+'</div>':'')
-    +'<div style="display:flex;justify-content:flex-end;margin-bottom:7px"><button class="hint-btn" onclick="showExHint(\''+id+'\')">💡 Hint</button></div>'
-    +'<div class="hint-box" id="'+id+'-hint"></div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+optsHtml+'</div>'
-    +'<div class="fb-box" id="'+id+'-fb"></div>';
+  wrap.innerHTML='';
+  // Tag
+  const tag=document.createElement('div'); tag.className='ex-tag'; tag.textContent=q.tag; wrap.appendChild(tag);
+  // Question
+  const qDiv=document.createElement('div'); qDiv.className='ex-q'; qDiv.innerHTML=q.q; wrap.appendChild(qDiv);
+  // Formula
+  if(q.formel){const f=document.createElement('div');f.className='formel-box';f.textContent=q.formel;wrap.appendChild(f);}
+  // Hint row
+  const hr=document.createElement('div'); hr.style.cssText='display:flex;justify-content:flex-end;margin-bottom:7px';
+  const hBtn=document.createElement('button'); hBtn.className='hint-btn'; hBtn.textContent='💡 Hint';
+  hBtn.onclick=()=>showExHint(id); hr.appendChild(hBtn); wrap.appendChild(hr);
+  // Hint box
+  const hBox=document.createElement('div'); hBox.className='hint-box'; hBox.id=id+'-hint'; wrap.appendChild(hBox);
+  // Options grid
+  const grid=document.createElement('div'); grid.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:8px';
+  q.opts.forEach((o,i)=>{
+    const btn=document.createElement('button'); btn.className='opt-btn'; btn.innerHTML=o;
+    btn.onclick=()=>checkEx(id,i); grid.appendChild(btn);
+  });
+  wrap.appendChild(grid);
+  // Feedback
+  const fbDiv=document.createElement('div'); fbDiv.className='fb-box'; fbDiv.id=id+'-fb'; wrap.appendChild(fbDiv);
   document.getElementById(id+'-next').classList.remove('vis');
 }
 function showExHint(id) { const s=exState[id]; const hb=document.getElementById(id+'-hint'); hb.textContent='💡 '+s.currentQ.hint; hb.classList.add('show'); s.hintUsed=true; }
@@ -720,7 +768,17 @@ function checkEx(id, chosen) {
 function nextEx(id) {
   const s=exState[id]; s.idx++;
   if(s.idx>=8){
-    document.getElementById(id+'-wrap').innerHTML='<div style="text-align:center;padding:22px 0"><div style="font-size:2.6rem;margin-bottom:11px">'+(Math.round(s.correct/8*100)>=75?'🏆':'💪')+'</div><div style="font-size:1.1rem;font-weight:700;color:var(--cyan);margin-bottom:5px">Runde fullført!</div><div style="color:var(--muted);font-size:.8rem;margin-bottom:16px">'+s.correct+'/8 riktige · '+s.xp+' XP</div><button class="opt-btn" style="display:inline-block;width:auto;padding:10px 20px" onclick="exState[\''+id+'\']=null;initAdaptive(\''+id+'\')">Øv igjen →</button></div>';
+    const wrap=document.getElementById(id+'-wrap'); wrap.innerHTML='';
+    const pct=Math.round(s.correct/8*100);
+    const inner=document.createElement('div'); inner.style.cssText='text-align:center;padding:22px 0';
+    inner.innerHTML='<div style="font-size:2.6rem;margin-bottom:11px">'+(pct>=75?'🏆':'💪')+'</div>'
+      +'<div style="font-size:1.1rem;font-weight:700;color:var(--cyan);margin-bottom:5px">Runde fullført!</div>'
+      +'<div style="color:var(--muted);font-size:.8rem;margin-bottom:16px">'+s.correct+'/8 riktige &middot; '+s.xp+' XP</div>';
+    const reBtn=document.createElement('button'); reBtn.className='opt-btn';
+    reBtn.style.cssText='display:inline-block;width:auto;padding:10px 20px';
+    reBtn.textContent='Øv igjen →';
+    reBtn.onclick=()=>{exState[id]=null;initAdaptive(id);};
+    inner.appendChild(reBtn); wrap.appendChild(inner);
     document.getElementById(id+'-next').classList.remove('vis');
     document.getElementById(id+'-prog-fill').style.width='100%';
     return;
@@ -757,11 +815,63 @@ const del2Qs = [
 
 
 function renderEksamen(delId, qs) {
-  const body=document.getElementById(delId+'-body'); window['eksAns_'+delId]={};
-  body.innerHTML=qs.map((q,qi)=>'<div class="eks-q"><div class="eks-q-num">Oppgave '+(qi+1)+'</div><div class="eks-q-text">'+q.q+'</div><div class="eks-opts">'+q.opts.map((o,oi)=>'<button class="option-btn" id="eo-'+delId+'-'+qi+'-'+oi+'" onclick="eksSelect(\''+delId+'\','+qi+','+oi+')">'+o+'</button>').join('')+'</div></div>').join('')+'<button class="eks-submit" onclick="submitEks(\''+delId+'\')">Lever del '+(delId==='del1'?'1':'2')+' →</button><div class="eks-result" id="'+delId+'-res"></div>';
+  const body=document.getElementById(delId+'-body');
+  window['eksAns_'+delId]={};
+  body.innerHTML='';
+  qs.forEach((q,qi)=>{
+    const qDiv=document.createElement('div'); qDiv.className='eks-q';
+    const num=document.createElement('div'); num.className='eks-q-num'; num.textContent='Oppgave '+(qi+1); qDiv.appendChild(num);
+    const txt=document.createElement('div'); txt.className='eks-q-text'; txt.innerHTML=q.q; qDiv.appendChild(txt);
+    const opts=document.createElement('div'); opts.className='eks-opts';
+    q.opts.forEach((o,oi)=>{
+      const btn=document.createElement('button'); btn.className='option-btn';
+      btn.id='eo-'+delId+'-'+qi+'-'+oi; btn.innerHTML=o;
+      btn.onclick=()=>eksSelect(delId,qi,oi); opts.appendChild(btn);
+    });
+    qDiv.appendChild(opts); body.appendChild(qDiv);
+  });
+  const sub=document.createElement('button'); sub.className='eks-submit';
+  sub.textContent='Lever del '+(delId==='del1'?'1':'2')+' →';
+  sub.onclick=()=>submitEks(delId); body.appendChild(sub);
+  const res=document.createElement('div'); res.className='eks-result'; res.id=delId+'-res'; body.appendChild(res);
 }
 function eksSelect(delId,qi,oi){const qs=delId==='del1'?del1Qs:del2Qs;qs[qi].opts.forEach((_,j)=>{const b=document.getElementById('eo-'+delId+'-'+qi+'-'+j);if(b){b.style.borderColor='';b.style.background='';}});const btn=document.getElementById('eo-'+delId+'-'+qi+'-'+oi);if(btn){btn.style.borderColor='var(--accent)';btn.style.background='rgba(124,92,252,.1)';}window['eksAns_'+delId][qi]=oi;}
-function submitEks(delId){const qs=delId==='del1'?del1Qs:del2Qs;const ans=window['eksAns_'+delId]||{};let score=0;let fbHtml='';qs.forEach((q,qi)=>{const chosen=ans[qi];const ok=chosen===q.c;if(ok)score++;qs[qi].opts.forEach((_,oi)=>{const b=document.getElementById('eo-'+delId+'-'+qi+'-'+oi);if(!b)return;b.disabled=true;b.style.borderColor='';b.style.background='';if(oi===q.c)b.classList.add('correct');else if(oi===chosen&&!ok)b.classList.add('wrong');});fbHtml+='<div class="eks-q-fb '+(ok?'r':'w')+'"><strong>Opp. '+(qi+1)+':</strong> '+(ok?'✅ Riktig':'❌ Feil — riktig: <em>'+q.opts[q.c]+'</em>')+'</div>';});const resEl=document.getElementById(delId+'-res');resEl.innerHTML='<div class="eks-score">'+(score>=4?'🏆':score>=3?'💪':'📚')+' '+score+'/'+qs.length+'</div><div class="eks-score-sub">'+Math.round(score/qs.length*100)+'% riktig</div>'+fbHtml;resEl.classList.add('show');resEl.scrollIntoView({behavior:'smooth',block:'nearest'});}
+function submitEks(delId) {
+  const qs=delId==='del1'?del1Qs:del2Qs;
+  const ans=window['eksAns_'+delId]||{};
+  let score=0;
+  const resEl=document.getElementById(delId+'-res');
+  resEl.innerHTML='';
+
+  qs.forEach((q,qi)=>{
+    const chosen=ans[qi];
+    const ok=chosen===q.c;
+    if(ok) score++;
+    // Mark buttons
+    q.opts.forEach((_,oi)=>{
+      const b=document.getElementById('eo-'+delId+'-'+qi+'-'+oi);
+      if(!b) return;
+      b.disabled=true; b.style.borderColor=''; b.style.background='';
+      if(oi===q.c) b.classList.add('correct');
+      else if(oi===chosen&&!ok) b.classList.add('wrong');
+    });
+    // Feedback item
+    const fb=document.createElement('div');
+    fb.className='eks-q-fb '+(ok?'r':'w');
+    fb.innerHTML='<strong>Opp. '+(qi+1)+':</strong> '+(ok?'✅ Riktig':'❌ Feil — riktig: <em>'+q.opts[q.c]+'</em>');
+    resEl.appendChild(fb);
+  });
+
+  const pct=Math.round(score/qs.length*100);
+  const scoreEl=document.createElement('div'); scoreEl.className='eks-score';
+  scoreEl.textContent=(score>=4?'🏆':score>=3?'💪':'📚')+' '+score+'/'+qs.length;
+  const subEl=document.createElement('div'); subEl.className='eks-score-sub';
+  subEl.textContent=pct+'% riktig';
+  resEl.insertBefore(subEl,resEl.firstChild);
+  resEl.insertBefore(scoreEl,resEl.firstChild);
+  resEl.classList.add('show');
+  resEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
 
 // COPY
 function copyScript(){const el=document.getElementById('scriptContent');navigator.clipboard.writeText(el.innerText).then(()=>{const btn=document.getElementById('copyBtn');btn.textContent='✓ Kopiert!';btn.classList.add('copied');setTimeout(()=>{btn.textContent='Kopier script';btn.classList.remove('copied');},2500);});}
